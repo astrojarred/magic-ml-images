@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../magicpy-env"
+		},
+		{
+			"path": "../../../../remote/lstdata01/jgreen/MAGIC_MC"
+		},
+		{
+			"path": "../../../../mnt/scratch/jgreen"
+		},
+		{
+			"path": "../mymars"
+		}
+	],
+	"settings": {}
+}
