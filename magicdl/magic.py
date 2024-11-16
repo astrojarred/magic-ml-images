@@ -563,6 +563,7 @@ class Event:
         self,
         telescope_id: Literal[1, 2, "M1", "M2"],
         cleaned: bool = False,
+        timing: bool = False,
         figsize: int | tuple[int, int] = (8, 8),
         rotate: bool = True,
         simple: bool = False,
@@ -574,7 +575,11 @@ class Event:
         transparent: bool = True,
         colormap: str | None = None,
     ) -> None | plt.Axes:
-        image = self.get_image(telescope_id, cleaned)
+
+        if timing:
+            image = self.get_timing(telescope_id)
+        else:
+            image = self.get_image(telescope_id, cleaned)
 
         if highlight_surviving:
             cleaned_image = self.get_image(telescope_id, cleaned=True)
@@ -639,16 +644,18 @@ class Event:
             match_original=True if highlight_surviving else False,
         )
 
+        unit = "ns" if timing else "p.e." if cleaned else "ADC Counts"
+
         collection.set_array(image)
         collection.set_clim(vmin=0)
         ax.add_collection(collection)
-        cb = fig.colorbar(collection, ax=ax, label="p.e." if cleaned else "ADC Counts")
+        cb = fig.colorbar(collection, ax=ax, label=unit)
         plt.xlim(-35, 35)
         plt.ylim(-35, 35)
         ax.set_aspect("equal")
 
         if title is True:
-            title = f"M{telescope_id} - Run {self._run_number} - Event {self._event_number} {self._particle_type}"
+            title = f"M{telescope_id}{' timing' if timing else ''} - Run {self._run_number} - Event {self._event_number} {self._particle_type}"
         elif title:
             title = title
         else:
