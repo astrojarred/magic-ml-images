@@ -11,6 +11,7 @@ from matplotlib.patches import RegularPolygon  # type: ignore
 from matplotlib.pyplot import cm  # type: ignore
 from matplotlib.transforms import Affine2D  # type: ignore
 from numpy import typing as npt
+from roque_cmap import roque, roque_chill
 
 # Define types for the geometry data
 GeometryNode = TypedDict(
@@ -571,12 +572,18 @@ class Event:
         highlight_surviving: bool = False,
         title: str | bool = False,
         transparent: bool = True,
+        colormap: str | None = None,
     ) -> None | plt.Axes:
         image = self.get_image(telescope_id, cleaned)
 
         if highlight_surviving:
             cleaned_image = self.get_image(telescope_id, cleaned=True)
             surviving = np.where(cleaned_image > 0, True, False)
+
+        if colormap is None or colormap == "roque_chill":
+            colormap = roque_chill()
+        elif colormap == "roque":
+            colormap = roque()
 
         if isinstance(figsize, int):
             figsize = (figsize, figsize)
@@ -626,7 +633,7 @@ class Event:
 
         collection = PatchCollection(
             patches,
-            cmap=cm.viridis,
+            cmap=colormap,
             alpha=0.8,
             transform=rotation + ax.transData,
             match_original=True if highlight_surviving else False,
