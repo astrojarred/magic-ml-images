@@ -11,7 +11,7 @@ from matplotlib.patches import RegularPolygon  # type: ignore
 from matplotlib.pyplot import cm  # type: ignore
 from matplotlib.transforms import Affine2D  # type: ignore
 from numpy import typing as npt
-from roque_cmap import roque, roque_chill
+from .roque_cmap import roque, roque_chill
 
 # Define types for the geometry data
 GeometryNode = TypedDict(
@@ -436,6 +436,12 @@ class Camera:
 
     def get_pixel_pairs(self, pixel: int) -> list[list[int]]:
         return self.geometry[pixel]["pairs"]
+    
+    def get_pixel_neighbors(self, pixel: int) -> list[int]:
+        return self.geometry[pixel]["neighbors"]
+    
+    def get_pixel_coordinates_xy(self, pixel: int) -> tuple[float, float]:
+        return self.geometry[pixel]["x"], self.geometry[pixel]["y"]
 
     def plot_camera(
         self,
@@ -445,7 +451,7 @@ class Camera:
         """Plot a nice image of the camera pixels and their numbering.
 
         Args:
-            figsize (Optional[Union[int, tuple]], optional): Size of the resulting plot. Defaults to None.
+            figsize (Optional[Union[int, tuple]], optional): Size of the resulting plot. Defaults to (15, 15).
         """
 
         if isinstance(figsize, int):
@@ -485,7 +491,37 @@ class Camera:
 
 
 class Event:
+    """A class representing a single event from the MAGIC telescope data.
+    
+    This class handles the storage and visualization of event data including images,
+    timing information, and truth values from both MAGIC telescopes (M1 and M2).
+
+    Attributes:
+        _data (pd.Series): The raw data row containing all event information
+        _event_number (int): Unique identifier for this event
+        _run_number (int): Run number this event belongs to
+        _true_energy (float): True energy of the incident particle
+        _true_theta (float): True theta angle of incident particle
+        _true_phi (float): True phi angle of incident particle
+        _telescope_theta (float): Telescope pointing theta angle
+        _telescope_phi (float): Telescope pointing phi angle
+        _particle_type (str): Type of particle ("gamma" or "hadron")
+        _true_first_interaction_height (float): Height of first interaction
+        _image_m1 (np.ndarray): Raw image from MAGIC-I telescope
+        _image_m2 (np.ndarray): Raw image from MAGIC-II telescope
+        _clean_image_m1 (np.ndarray): Cleaned image from MAGIC-I
+        _clean_image_m2 (np.ndarray): Cleaned image from MAGIC-II
+        _timing_m1 (np.ndarray): Timing information from MAGIC-I
+        _timing_m2 (np.ndarray): Timing information from MAGIC-II
+    """
+
     def __init__(self, data_row: pd.Series, particle_type: Literal["gamma", "hadron"]):
+        """Initialize an Event object.
+
+        Args:
+            data_row (pd.Series): Row of data containing all event information
+            particle_type (Literal["gamma", "hadron"]): Type of incident particle
+        """
         self._data = data_row
         self._event_number = data_row["event_number"]
         self._run_number = data_row["run_number"]
@@ -505,14 +541,29 @@ class Event:
 
     @property
     def event_number(self) -> int:
+        """Get the event number.
+
+        Returns:
+            int: Unique identifier for this event
+        """
         return self._event_number
 
     @property
     def run_number(self) -> int:
+        """Get the run number.
+
+        Returns:
+            int: Run number this event belongs to
+        """
         return self._run_number
 
     @property
     def truth(self) -> dict[str, float]:
+        """Get the true (Monte Carlo) parameters of the event.
+
+        Returns:
+            dict[str, float]: Dictionary containing true energy, angles and interaction height
+        """
         return {
             "energy": self._true_energy,
             "theta": self._true_theta,
@@ -522,6 +573,11 @@ class Event:
 
     @property
     def pointing(self) -> dict[str, float]:
+        """Get the telescope pointing direction.
+
+        Returns:
+            dict[str, float]: Dictionary containing telescope theta and phi angles
+        """
         return {
             "theta": self._telescope_theta,
             "phi": self._telescope_phi,
@@ -529,19 +585,43 @@ class Event:
 
     @property
     def particle_type(self) -> Literal["gamma", "hadron"]:
+        """Get the particle type.
+
+        Returns:
+            Literal["gamma", "hadron"]: Type of the incident particle
+        """
         return self._particle_type
 
     @property
     def particle_id(self) -> int:
+        """Get numerical ID for particle type (0 for gamma, 1 for hadron).
+
+        Returns:
+            int: Particle type ID
+        """
         return 0 if self._particle_type == "gamma" else 1
 
     @property
     def data(self) -> dict[str, int | float | np.ndarray]:
+        """Get all raw data as dictionary.
+
+        Returns:
+            dict[str, int | float | np.ndarray]: Dictionary containing all event data
+        """
         return self._data.to_dict()
 
     def get_image(
         self, telescope_id: Literal[1, 2, "M1", "M2"], cleaned: bool = False
     ) -> np.ndarray:
+        """Get the image from specified telescope.
+
+        Args:
+            telescope_id (Literal[1, 2, "M1", "M2"]): Which telescope to get image from
+            cleaned (bool, optional): Whether to return cleaned image. Defaults to False.
+
+        Returns:
+            np.ndarray: Image data from specified telescope
+        """
         if cleaned:
             if telescope_id == 1 or telescope_id == "M1":
                 return self._clean_image_m1
@@ -554,6 +634,14 @@ class Event:
                 return self._image_m2
 
     def get_timing(self, telescope_id: Literal[1, 2, "M1", "M2"]) -> np.ndarray:
+        """Get timing information from specified telescope.
+
+        Args:
+            telescope_id (Literal[1, 2, "M1", "M2"]): Which telescope to get timing from
+
+        Returns:
+            np.ndarray: Timing data from specified telescope
+        """
         if telescope_id == 1 or telescope_id == "M1":
             return self._timing_m1
         else:
@@ -575,21 +663,49 @@ class Event:
         transparent: bool = True,
         colormap: str | None = None,
     ) -> None | plt.Axes:
+        """Plot the event data as a camera image.
 
+        Args:
+            telescope_id (Literal[1, 2, "M1", "M2"]): Which telescope to plot
+            cleaned (bool, optional): Whether to plot cleaned image. Defaults to False.
+            timing (bool, optional): Whether to plot timing information. Defaults to False.
+            figsize (int | tuple[int, int], optional): Figure size. Defaults to (8, 8).
+            rotate (bool, optional): Whether to rotate image. Defaults to True.
+            simple (bool, optional): Hide axes and colorbar. Defaults to False.
+            hide_axes (bool, optional): Hide only axes. Defaults to False.
+            filename (str | None, optional): Save plot to file. Defaults to None.
+            return_ax (bool, optional): Return axes instead of showing. Defaults to False.
+            highlight_surviving (bool, optional): Highlight surviving pixels. Defaults to False.
+            title (str | bool, optional): Custom title or auto-generate if True. Defaults to False.
+            transparent (bool, optional): Make background transparent. Defaults to True.
+            colormap (str | None, optional): Custom colormap name. Defaults to None.
+
+        Returns:
+            None | plt.Axes: Matplotlib axes if return_ax is True, else None
+        """
+        # Get appropriate image data based on timing flag
         if timing:
             image = self.get_timing(telescope_id)
+
+            if cleaned:
+                cleaned_image = self.get_image(telescope_id, cleaned=True)
+                # set image to zero where cleaned image is zero
+                image = np.where(cleaned_image > 0, image, 0)
         else:
             image = self.get_image(telescope_id, cleaned)
 
+        # Get surviving pixels mask if highlighting
         if highlight_surviving:
             cleaned_image = self.get_image(telescope_id, cleaned=True)
             surviving = np.where(cleaned_image > 0, True, False)
 
+        # Set colormap
         if colormap is None or colormap == "roque_chill":
             colormap = roque_chill()
         elif colormap == "roque":
             colormap = roque()
 
+        # Handle figsize input
         if isinstance(figsize, int):
             figsize = (figsize, figsize)
         elif isinstance(figsize, tuple):
@@ -604,12 +720,14 @@ class Event:
         if transparent:
             ax.patch.set_alpha(0)  # Make axes background transparent
 
+        # Create hexagonal patches for each pixel
         patches = []
 
         for i in range(Geometry.n_pixels):
             _, q, r, _ = Geometry.pixel_to_axial(i)
             x, y = Geometry.pointy_hex_to_pixel(q, r, size=1)
 
+            # Set edge properties based on highlighting
             if highlight_surviving:
                 if surviving[i]:
                     edgecolor = (1, 0, 0, 0.3)
@@ -633,9 +751,10 @@ class Event:
                 )
             )
 
-        # get the center coordinates of the patch
+        # Apply rotation transform if requested
         rotation = Affine2D().rotate_around(0, 0, 1 / 3) if rotate else Affine2D()
 
+        # Create patch collection with all pixels
         collection = PatchCollection(
             patches,
             cmap=colormap,
@@ -644,8 +763,10 @@ class Event:
             match_original=True if highlight_surviving else False,
         )
 
+        # Set appropriate unit label
         unit = "ns" if timing else "p.e." if cleaned else "ADC Counts"
 
+        # Set up plot elements
         collection.set_array(image)
         collection.set_clim(vmin=0)
         ax.add_collection(collection)
@@ -654,6 +775,7 @@ class Event:
         plt.ylim(-35, 35)
         ax.set_aspect("equal")
 
+        # Handle title
         if title is True:
             title = f"M{telescope_id}{' timing' if timing else ''} - Run {self._run_number} - Event {self._event_number} {self._particle_type}"
         elif title:
@@ -664,13 +786,14 @@ class Event:
         if title:
             plt.title(title)
 
-        # if simple, hide axes and colorbar
+        # Handle display options
         if simple:
             ax.set_axis_off()
             cb.remove()
         elif hide_axes:
             ax.set_axis_off()
 
+        # Handle output
         if filename:
             plt.savefig(filename, transparent=True)  # Add transparent=True for saving
             plt.close()

@@ -1,6 +1,6 @@
 """Colormaps for MAGIC telescope plots"""
 
-import importlib.resources as pkg_resources
+from pathlib import Path
 import pickle
 from math import ceil
 
@@ -8,7 +8,7 @@ from math import ceil
 def roque_generator(n_colors=256):
     """Return an evenly spaced array of colors from the custom roque colors"""
 
-    path = pkg_resources.files("roque_cmap").joinpath("roque_colors_256.pkl")
+    path = Path(__file__).parent / "roque_colors_256.pkl"
     with open(path, "rb") as f:
         roque_colors = pickle.load(f)
 
@@ -33,7 +33,7 @@ def roque(n_colors=256):
 def roque_chill_generator(n_colors=200):
     """Return an evenly spaced array of colors from the custom roque colors"""
 
-    path = pkg_resources.files("roque_cmap").joinpath("roque_chill_200.pkl")
+    path = Path(__file__).parent / "roque_chill_200.pkl"
     with open(path, "rb") as f:
         roque_colors = pickle.load(f)
 
