@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 import uproot
 
+import star
+
 
 def process_calibrated(
     run_number: int,
@@ -18,6 +20,7 @@ def process_calibrated(
     to_parquet: bool = True,
     parquet_file_prefix: str | None = None,
     max_event_number: int = 10000,
+    overwrite_parquet: bool = False,
     overwrite_root: bool = True,
 ):
     # load in environment variables
@@ -46,13 +49,18 @@ def process_calibrated(
     if not isinstance(calibrated_m2_file, Path):
         calibrated_m2_file = Path(calibrated_m2_file)
 
+    if not overwrite_parquet:
+        output_filename = superstar_output_dir / f"SuperStar_{run_number}.parquet"
+        if output_filename.exists():
+            return output_filename
+
     # ensure the files exist
     if not calibrated_m1_file.exists():
         raise FileNotFoundError(f"Calibrated M1 file not found: {calibrated_m1_file}")
     if not calibrated_m2_file.exists():
         raise FileNotFoundError(f"Calibrated M2 file not found: {calibrated_m2_file}")
 
-    starm1 = mars.Star(
+    starm1 = star.Star(
         input_files=[calibrated_m1_file],
         analysis_path=star_output_dir,
         output_dir=star_output_dir,
@@ -61,7 +69,7 @@ def process_calibrated(
         is_mc=True,
     )
 
-    starm2 = mars.Star(
+    starm2 = star.Star(
         input_files=[calibrated_m2_file],
         analysis_path=star_output_dir,
         output_dir=star_output_dir,
@@ -82,13 +90,16 @@ def process_calibrated(
         overwrite=overwrite_root,
     )
 
-    if resm1.get("return_code") != 0:
-        raise ValueError(f"Error running M1 star: \n{resm1['error']}")
-    if resm2.get("return_code") != 0:
-        raise ValueError(f"Error running M2 star: \n{resm2['error']}")
+    resm1 = resm1[0]
+    resm2 = resm2[0]
 
-    star_m1_filepath = resm1["star_file_path"]
-    star_m2_filepath = resm2["star_file_path"]
+    if resm1.return_code != 0:
+        raise ValueError(f"Error running M1 star: \n{resm1.error}")
+    if resm2.return_code != 0:
+        raise ValueError(f"Error running M2 star: \n{resm2.error}")
+
+    star_m1_filepath = resm1.output_file
+    star_m2_filepath = resm2.output_file
 
     star_m1_regex = star_m1_filepath.parent / f"{star_m1_filepath.stem}*.root"
     star_m2_regex = star_m2_filepath.parent / f"{star_m2_filepath.stem}*.root"
@@ -109,10 +120,10 @@ def process_calibrated(
         overwrite=overwrite_root,
     )
 
-    if ssres.get("return_code") != 0:
-        raise ValueError(f"Error running SuperStar: \n{ssres['error']}")
+    if ssres.return_code != 0:
+        raise ValueError(f"Error running SuperStar: \n{ssres.error}")
 
-    superstar_filepath = ssres["superstar_file"]
+    superstar_filepath = ssres.output_file
 
     # run the writeImages2uproot macro
     eof = f'root -b -l -q {env["MARSSYS"]}/macros/writeImages2uproot.C("{superstar_filepath.name}")'
@@ -404,6 +415,7 @@ def process_row(
     run_number_col: str = "run_number",
     m1_filepath_col: str = "m1_calib_file",
     m2_filepath_col: str = "m2_calib_file",
+    overwrite_parquet: bool = False,
 ):
     """Process a single row from a dataframe with self-contained environment setup"""
     # Import required modules inside function for worker processes
@@ -428,6 +440,7 @@ def process_row(
             calibrated_m2_file=row[m2_filepath_col],
             star_output_dir=process_output_dir,
             to_parquet=True,
+            overwrite_parquet=overwrite_parquet,
         )
 
         # Move the result file to the main output directory
