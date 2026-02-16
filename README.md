@@ -5,6 +5,7 @@
 - [About](#about)
 - [Getting Started](#getting_started)
 - [Usage](#usage)
+- [The Data](#the_data)
 
 ## About <a name = "about"></a>
 
@@ -64,7 +65,7 @@ Open the example notebook: `example.ipynb` to explore some MAGIC data!
 
 Open the notebook: `pytorch.ipynb` to see an example of how to load the parquet files into a PyTorch Dataset and DataLoader.
 
-## The Data
+## The Data  <a name = "the_data"></a>
 
 - You will be provided with the data in the form of parquet files.
 - The most up-to-date files are the `magic-gammas-chunked.parquet` and `magic-protons-chunked.parquet` files. They contain the same events as the other files, except **the data is formatted in a way that supports streaming and lazy-loading**.
@@ -72,4 +73,5 @@ Open the notebook: `pytorch.ipynb` to see an example of how to load the parquet 
 - The gamma events are stored in 2 ways:
   - All the gammas in one big file: `magic-gammas.parquet`
   - The exact same gamma events split into 4 smaller files: `magic-gammas-1.parquet`, `magic-gammas-2.parquet`, `magic-gammas-3.parquet`, `magic-gammas-4.parquet`
+
 
