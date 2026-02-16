@@ -5,6 +5,7 @@
 - [About](#about)
 - [Getting Started](#getting_started)
 - [Usage](#usage)
+- [Google Colab](#colab)
 - [The Data](#the_data)
 
 ## About <a name = "about"></a>
@@ -65,6 +66,12 @@ Open the example notebook: `example.ipynb` to explore some MAGIC data!
 
 Open the notebook: `pytorch.ipynb` to see an example of how to load the parquet files into a PyTorch Dataset and DataLoader.
 
+## Running on Google Colab <a name = "colab"></a>
+
+In order to run your notebooks on Google Colab, please write me and I'll provide you with a data downloading script.
+
+The rest of the needed packages should already be installed into the default environment, and you can just copy/paste the cells from the example notebooks that you need.
+
 ## The Data  <a name = "the_data"></a>
 
 - You will be provided with the data in the form of parquet files.
@@ -73,5 +80,6 @@ Open the notebook: `pytorch.ipynb` to see an example of how to load the parquet 
 - The gamma events are stored in 2 ways:
   - All the gammas in one big file: `magic-gammas.parquet`
   - The exact same gamma events split into 4 smaller files: `magic-gammas-1.parquet`, `magic-gammas-2.parquet`, `magic-gammas-3.parquet`, `magic-gammas-4.parquet`
+
 
 
